@@ -1,0 +1,17 @@
+name: Holiday deals email
+
+on:
+  schedule:
+    - cron: "15 8 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call email endpoint
+        run: |
+          curl -sS -X POST "${{ secrets.APP_BASE_URL }}/api/alerts/email" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -H "content-type: application/json" \
+            -d '{}'
