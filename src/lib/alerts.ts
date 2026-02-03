@@ -13,6 +13,11 @@ export type AlertItem = {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+function toReturnDateKey(returnDate: string | null | undefined) {
+  // Must be non-nullable for Prisma compound unique input
+  return returnDate ?? "";
+}
+
 export async function upsertAndDetectAlert(args: {
   deal: Deal;
   context: string;
@@ -22,26 +27,33 @@ export async function upsertAndDetectAlert(args: {
   const { deal, context, priceDropThresholdGBP } = args;
   const cooldownMs = args.cooldownMs ?? DAY_MS;
 
-  const key = {
+  const returnDateKey = toReturnDateKey(deal.returnDate);
+
+  const whereKey = {
     context,
     origin: deal.origin,
     destination: deal.destination,
     departDate: deal.departDate,
-    returnDate: deal.returnDate ?? null,
+    returnDateKey,
   };
+
+  const now = new Date();
 
   const existing = await prisma.dealSeen.findUnique({
     where: {
-      context_origin_destination_departDate_returnDate: key,
+      deal_seen_key: whereKey,
     },
   });
-
-  const now = new Date();
 
   if (!existing) {
     await prisma.dealSeen.create({
       data: {
-        ...key,
+        context,
+        origin: deal.origin,
+        destination: deal.destination,
+        departDate: deal.departDate,
+        returnDate: deal.returnDate ?? null,
+        returnDateKey,
         lastPrice: deal.priceGBP,
         lastSeenAt: now,
         lastAlertedAt: now,
@@ -55,16 +67,15 @@ export async function upsertAndDetectAlert(args: {
   const dropPct = existing.lastPrice > 0 ? drop / existing.lastPrice : 0;
 
   const alertedRecently =
-    existing.lastAlertedAt &&
+    !!existing.lastAlertedAt &&
     now.getTime() - existing.lastAlertedAt.getTime() < cooldownMs;
 
-  const significantDrop =
-    drop >= priceDropThresholdGBP || dropPct >= 0.1;
+  const significantDrop = drop >= priceDropThresholdGBP || dropPct >= 0.1;
 
   if (!alertedRecently && significantDrop) {
     await prisma.dealSeen.update({
       where: {
-        context_origin_destination_departDate_returnDate: key,
+        deal_seen_key: whereKey,
       },
       data: {
         lastPrice: deal.priceGBP,
@@ -82,10 +93,9 @@ export async function upsertAndDetectAlert(args: {
     };
   }
 
-  // Always update "seen" timestamp; update price if it changed but wasn't significant
   await prisma.dealSeen.update({
     where: {
-      context_origin_destination_departDate_returnDate: key,
+      deal_seen_key: whereKey,
     },
     data: {
       lastSeenAt: now,

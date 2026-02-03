@@ -15,14 +15,20 @@ datasource db {
 
 model DealSeen {
   id            String   @id @default(cuid())
-  context       String   // e.g. "regular" or "bh:2026-05-04"
+  context       String
   origin        String
   destination   String
   departDate    String
+
+  // keep the real value nullable (for display)
   returnDate    String?
+
+  // NEW: non-nullable key used for uniqueness
+  returnDateKey String  @default("")
+
   lastPrice     Float
   lastSeenAt    DateTime @default(now())
   lastAlertedAt DateTime?
 
-  @@unique([context, origin, destination, departDate, returnDate], name: "context_origin_destination_departDate_returnDate")
+  @@unique([context, origin, destination, departDate, returnDateKey], name: "deal_seen_key")
 }
