@@ -9,7 +9,7 @@
     "lint": "eslint",
     "postinstall": "prisma generate",
     "vercel-build": "prisma generate && next build",
-    "cron:run": "curl -sS --fail-with-body -X POST \"http://localhost:3000/api/alerts/email\" -H \"x-cron-secret: $CRON_SECRET\" -H \"content-type: application/json\" -d '{}'"
+    "cron:run": "curl -sS --fail-with-body -X POST \"http://localhost:3000/api/alerts/email\" -H \"x-cron-secret: some-long-random-string\" -H \"content-type: application/json\" -d '{}'"
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",
