@@ -1,4 +1,4 @@
-export type { Deal, LatestDealsResponse } from "./deals";
+export type { Deal, LatestDealsResponse, DealLine } from "./deals";
 export type { AlertItem, AlertReason } from "./alerts";
 export type { AlertsRunResponse, InspirationResponse } from "./api";
 export type {

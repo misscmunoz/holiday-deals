@@ -20,3 +20,12 @@ export type LatestDealsResponse = {
         context: string;
     }>;
 };
+
+export type DealLine = {
+    origin: string;
+    destination: string;
+    departDate: string;
+    returnDate: string | null;
+    priceGBP: number;
+    reason: string;
+};

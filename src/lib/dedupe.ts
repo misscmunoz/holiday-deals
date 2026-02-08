@@ -1,6 +1,6 @@
-import type { DealLike } from "@/lib/types/deals";
+import type { Deal } from "@/lib/types/deals";
 
-export function dedupeDeals(deals: DealLike[]) {
+export function dedupeDeals(deals: Deal[]) {
     const seen = new Set<string>();
     return deals.filter((d) => {
         const key = `${d.origin}|${d.destination}|${d.departDate}|${d.returnDate ?? ""}`;

@@ -1,5 +1,5 @@
 import { nextFridays } from "@/lib/dates";
-import type { Trip } from "@/lib/providers/types";
+import type { Trip } from "@/lib/types";
 
 export function addDays(iso: string, days: number) {
   const d = new Date(iso);

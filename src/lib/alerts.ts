@@ -1,15 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { Deal } from "@/lib/types/deals";
-
-export type AlertReason = "NEW_DEAL" | "PRICE_DROP";
-
-export type AlertItem = {
-  deal: Deal;
-  context: string;
-  reason: AlertReason;
-  dropGBP?: number;
-  dropPct?: number;
-};
+import { AlertItem } from "./types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

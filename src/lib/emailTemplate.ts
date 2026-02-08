@@ -1,57 +1,51 @@
-export type DealLine = {
-    origin: string;
-    destination: string;
-    departDate: string;
-    returnDate: string | null;
-    priceGBP: number;
-    reason: string;
-};
 
+
+import { DealLine } from "./types";
 export function buildDealsEmailText(args: {
-    heading: string;
-    maxPrice: number;
-    origins: string[];
-    deals: DealLine[];
-    stats: { actionable: number; totalDetected: number; suppressedByBudget: number };
+  heading: string;
+  maxPrice: number;
+  origins: string[];
+  deals: DealLine[];
+  stats: { actionable: number; totalDetected: number; suppressedByBudget: number };
 }) {
-    const lines = args.deals.slice(0, 15).map((d) => {
-        const dates = d.returnDate ? `${d.departDate} → ${d.returnDate}` : d.departDate;
-        return `• ${d.origin} → ${d.destination} (${dates}) — £${d.priceGBP.toFixed(0)} [${d.reason}]`;
-    });
+  const lines = args.deals.slice(0, 15).map((d) => {
+    const dates = d.returnDate ? `${d.departDate} → ${d.returnDate}` : d.departDate;
+    return `• ${d.origin} → ${d.destination} (${dates}) — £${d.priceGBP.toFixed(0)} [${d.reason}]`;
+  });
 
-    return [
-        args.heading,
-        `Under £${args.maxPrice} • Origins: ${args.origins.join(", ")}`,
-        "",
-        ...lines,
-        "",
-        "Stats:",
-        `- actionable: ${args.stats.actionable}`,
-        `- detected: ${args.stats.totalDetected}`,
-        `- suppressed by budget: ${args.stats.suppressedByBudget}`,
-        "",
-    ].join("\n");
+  return [
+    args.heading,
+    `Under £${args.maxPrice} • Origins: ${args.origins.join(", ")}`,
+    "",
+    ...lines,
+    "",
+    "Stats:",
+    `- actionable: ${args.stats.actionable}`,
+    `- detected: ${args.stats.totalDetected}`,
+    `- suppressed by budget: ${args.stats.suppressedByBudget}`,
+    "",
+  ].join("\n");
 }
 
 export function buildDealsEmailHtml(args: {
-    heading: string;
-    maxPrice: number;
-    origins: string[];
-    deals: DealLine[];
-    stats: { actionable: number; totalDetected: number; suppressedByBudget: number };
-    viewUrl?: string;
+  heading: string;
+  maxPrice: number;
+  origins: string[];
+  deals: DealLine[];
+  stats: { actionable: number; totalDetected: number; suppressedByBudget: number };
+  viewUrl?: string;
 }) {
-    const escapeHtml = (s: string) =>
-        s.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  const escapeHtml = (s: string) =>
+    s.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 
-    const rows = args.deals
-        .slice(0, 15)
-        .map((d) => {
-            const dates = d.returnDate ? `${d.departDate} → ${d.returnDate}` : d.departDate;
-            const badgeBg = d.reason === "PRICE_DROP" ? "#fef3c7" : "#dcfce7";
-            const badgeFg = d.reason === "PRICE_DROP" ? "#92400e" : "#166534";
+  const rows = args.deals
+    .slice(0, 15)
+    .map((d) => {
+      const dates = d.returnDate ? `${d.departDate} → ${d.returnDate}` : d.departDate;
+      const badgeBg = d.reason === "PRICE_DROP" ? "#fef3c7" : "#dcfce7";
+      const badgeFg = d.reason === "PRICE_DROP" ? "#92400e" : "#166534";
 
-            return `
+      return `
         <tr>
           <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-weight:600;color:#111827;">
             ${escapeHtml(d.origin)} → ${escapeHtml(d.destination)}
@@ -69,20 +63,20 @@ export function buildDealsEmailHtml(args: {
           </td>
         </tr>
       `;
-        })
-        .join("");
+    })
+    .join("");
 
-    const viewButton = args.viewUrl
-        ? `
+  const viewButton = args.viewUrl
+    ? `
       <div style="margin-top:16px;text-align:center;">
         <a href="${escapeHtml(args.viewUrl)}" style="display:inline-block;background:#111827;color:white;text-decoration:none;padding:10px 14px;border-radius:10px;font-weight:700;font-size:14px;">
           View full results
         </a>
       </div>
     `
-        : "";
+    : "";
 
-    return `
+  return `
   <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Inter,Helvetica,Arial,sans-serif;background:#f3f4f6;padding:24px 0;">
     <div style="max-width:720px;margin:0 auto;background:#ffffff;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.05);overflow:hidden;">
       <div style="background:linear-gradient(135deg,#0ea5e9,#6366f1);color:white;padding:20px 24px;">

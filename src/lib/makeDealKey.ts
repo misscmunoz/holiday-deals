@@ -1,7 +1,6 @@
 // lib/utils/deals.ts
 import type { Deal } from "@/lib/types";
 
-
 /**
  * This MUST match your Prisma unique key:
  * @@unique([context, origin, destination, departDate, returnDateKey])
