@@ -1,5 +1,5 @@
 import { amadeusGet } from "@/lib/amadeus";
-import type { FlightQuote, Trip } from "@/lib/providers/types";
+import type { FlightQuote, Trip } from "@/lib/types";
 
 type FlightOffersResponse = {
   data?: Array<{

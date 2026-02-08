@@ -1,4 +1,4 @@
-import type { FlightQuote, Trip } from "@/lib/providers/types";
+import type { FlightQuote, Trip } from "@/lib/types";
 
 export async function getCheapestFlightDuffel(_trip: Trip): Promise<FlightQuote | null> {
   // Stubbed for architecture clarity.

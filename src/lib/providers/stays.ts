@@ -1,4 +1,4 @@
-import type { StayQuote, Trip } from "@/lib/providers/types";
+import type { StayQuote, Trip } from "@/lib/types";
 
 // Hostel-first policy for now.
 // Later you can:
