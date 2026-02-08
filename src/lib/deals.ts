@@ -3,6 +3,7 @@ import { amadeusGet } from "@/lib/amadeus";
 import { dedupeDeals } from "@/lib/dedupe";
 import { toISODate, nextFridays } from "@/lib/dates";
 import type { InspirationResponse } from "@/lib/types/api";
+import { makeDealKey } from "./makeDealKey";
 
 const SEARCH_DAYS_AHEAD = 30;
 const SEARCH_WEEKS_AHEAD = 5;
@@ -46,12 +47,10 @@ export async function fetchWeekendDeals() {
         if (!Number.isFinite(price) || price > MAX_PRICE) continue;
 
         deals.push({
-          context: "weekend",
           origin: r.origin,
           destination: r.destination,
           departDate: r.departureDate,
           returnDate: r.returnDate ?? null,
-          returnDateKey: r.returnDate ?? "",
           priceGBP: price,
           currency: r.price?.currency ?? "GBP",
         });
@@ -93,12 +92,10 @@ export async function fetchDealsForDateRange(args: {
         if (!Number.isFinite(price) || price > MAX_PRICE) continue;
 
         deals.push({
-          context: "date-range",
           origin: r.origin,
           destination: r.destination,
           departDate: r.departureDate,
           returnDate: r.returnDate ?? null,
-          returnDateKey: r.returnDate ?? "",
           priceGBP: price,
           currency: r.price?.currency ?? "GBP",
         });
@@ -114,7 +111,7 @@ export async function fetchDealsForDateRange(args: {
 
   const seen = new Set<string>();
   const uniqueDeals = deals.filter(d => {
-    const key = `${d.context}|${d.origin}|${d.destination}|${d.departDate}|${d.returnDateKey}`;
+    const key = makeDealKey(d);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -188,12 +185,10 @@ export async function fetchWeekendDealsViaOffers(args: {
       if (!Number.isFinite(bestPrice) || bestPrice > MAX_PRICE) continue;
 
       deals.push({
-        context: args.context,
         origin: args.origin,
         destination,
         departDate: args.departDate,
         returnDate: args.returnDate,
-        returnDateKey: args.returnDate,
         priceGBP: bestPrice,
         currency: best.price?.currency ?? "GBP",
       });
