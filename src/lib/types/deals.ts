@@ -1,8 +1,10 @@
 export type Deal = {
+    context: string;
     origin: string;
     destination: string;
     departDate: string;        // YYYY-MM-DD
     returnDate: string | null; // ALWAYS present, null if one-way
+    returnDateKey: string;
     priceGBP: number;
     currency: string;          // keep string for now
 };

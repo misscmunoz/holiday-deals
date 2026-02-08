@@ -1,4 +1,4 @@
-import { DealLike } from "./types/deals";
+import { Deal } from "@/lib/types/deals";
 import { amadeusGet } from "@/lib/amadeus";
 import { dedupeDeals } from "@/lib/dedupe";
 import { toISODate, nextFridays } from "@/lib/dates";
@@ -34,7 +34,7 @@ export async function fetchWeekendDeals() {
   const dateTo = toISODate(end);
 
   const fridays = new Set(nextFridays(SEARCH_WEEKS_AHEAD));
-  const deals: DealLike[] = [];
+  const deals: Deal[] = [];
 
   for (const origin of ORIGINS) {
     try {
@@ -98,7 +98,7 @@ export async function fetchDealsForDateRange(args: {
   const MAX_PRICE = Number(process.env.MAX_PRICE_GBP ?? "150");
   const ORIGINS = (process.env.ORIGINS ?? "LPL,MAN").split(",").map(s => s.trim());
 
-  const deals: DealLike[] = [];
+  const deals: Deal[] = [];
 
   for (const origin of ORIGINS) {
     try {
@@ -179,7 +179,7 @@ export async function fetchWeekendDealsViaOffers(args: {
   departDate: string;  // YYYY-MM-DD
   returnDate: string;  // YYYY-MM-DD
 }) {
-  const deals: DealLike[] = [];
+  const deals: Deal[] = [];
 
   for (const destination of DESTINATIONS) {
     try {

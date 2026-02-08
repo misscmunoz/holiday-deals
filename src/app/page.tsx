@@ -1,5 +1,5 @@
 import DealsTable from "./components/DealsTable";
-import { getHomepageDeals } from "@/lib/homepageDeals";
+import { getHomepageDeals } from "@/app/actions/homepageDeals";
 
 export default async function Home() {
   const deals = await getHomepageDeals({ take: 120 });

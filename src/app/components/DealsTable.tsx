@@ -4,6 +4,7 @@ import React from "react";
 import Image from "next/image";
 import type { Deal } from "@/lib/types";
 import { AIRPORT_TO_COUNTRY } from "@/lib/airportCountries";
+import { deleteDealsByKeys } from "@/app/actions/deleteDeals";
 
 type Props = { deals: Deal[] };
 
@@ -24,6 +25,20 @@ function Flag({ iata }: { iata: string }) {
             className="rounded-[4px] ring-1 ring-white/10"
         />
     );
+}
+
+/**
+ * This MUST match your Prisma unique key:
+ * @@unique([context, origin, destination, departDate, returnDateKey])
+ */
+function makeKey(d: Deal) {
+    return [
+        d.context,
+        d.origin,
+        d.destination,
+        d.departDate,
+        d.returnDate ?? "" // maps to returnDateKey
+    ].join("::");
 }
 
 export default function DealsTable({ deals }: Props) {
@@ -53,6 +68,7 @@ export default function DealsTable({ deals }: Props) {
     }, [deals, q, maxPrice]);
 
     const STORAGE_KEY = "selectedDeals";
+
     const [selectedKeys, setSelectedKeys] = React.useState<Record<string, boolean>>(() => {
         if (typeof window === "undefined") return {};
         const saved = localStorage.getItem(STORAGE_KEY);
@@ -65,12 +81,12 @@ export default function DealsTable({ deals }: Props) {
         }
     }, [selectedKeys]);
 
-    const allVisibleKeys = sorted.map(
-        (d) => `${d.origin}-${d.destination}-${d.departDate}-${d.returnDate ?? ""}`
-    );
+    // ✅ Use the SAME key format everywhere
+    const allVisibleKeys = sorted.map(makeKey);
 
     const areAllSelected = allVisibleKeys.every((k) => selectedKeys[k]);
-    const isIndeterminate = allVisibleKeys.some((k) => selectedKeys[k]) && !areAllSelected;
+    const isIndeterminate =
+        allVisibleKeys.some((k) => selectedKeys[k]) && !areAllSelected;
 
     const toggleSelectAll = () => {
         setSelectedKeys((prev) => {
@@ -119,30 +135,38 @@ export default function DealsTable({ deals }: Props) {
                         </select>
                     </div>
 
-                    <div className="flex flex-wrap items-center justify-start gap-2 md:justify-end">
-                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-white/70">
-                            Showing <b className="text-white">{sorted.length}</b>
-                        </span>
-                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-white/70">
-                            Max <b className="text-white">£{maxPrice}</b>
-                        </span>
-                    </div>
-
                     {Object.keys(selectedKeys).length > 0 && (
                         <div className="col-span-full mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">
                             <span>
-                                {Object.keys(selectedKeys).length} deal{Object.keys(selectedKeys).length > 1 && "s"} selected
+                                {Object.keys(selectedKeys).length} deal
+                                {Object.keys(selectedKeys).length > 1 && "s"} selected
                             </span>
+
                             <div className="flex gap-2">
                                 <button
-                                    onClick={() => {
+                                    onClick={async () => {
                                         const selected = Object.keys(selectedKeys);
-                                        alert(`You selected:\n${selected.join("\n")}`);
+                                        if (selected.length === 0) return;
+
+                                        const confirmed = confirm(
+                                            `Delete ${selected.length} deal(s)?`
+                                        );
+                                        if (!confirmed) return;
+
+                                        try {
+                                            await deleteDealsByKeys(selected);
+                                            setSelectedKeys({});
+                                            window.location.reload();
+                                        } catch (err) {
+                                            console.error(err);
+                                            alert("Failed to delete deals.");
+                                        }
                                     }}
                                     className="rounded-lg bg-white/10 px-4 py-1.5 text-white hover:bg-white/20 transition"
                                 >
-                                    Do Something
+                                    Delete
                                 </button>
+
                                 <button
                                     onClick={() => setSelectedKeys({})}
                                     className="rounded-lg bg-red-500/20 px-4 py-1.5 text-red-300 hover:bg-red-500/30 transition"
@@ -191,7 +215,7 @@ export default function DealsTable({ deals }: Props) {
                                 </tr>
                             ) : (
                                 sorted.map((d) => {
-                                    const key = `${d.origin}-${d.destination}-${d.departDate}-${d.returnDate ?? ""}`;
+                                    const key = makeKey(d);
 
                                     return (
                                         <tr
@@ -216,12 +240,16 @@ export default function DealsTable({ deals }: Props) {
                                                 <div className="flex items-center gap-3">
                                                     <Flag iata={d.destination} />
                                                     <span className="font-semibold text-white">
-                                                        {d.origin} <span className="text-white/50">→</span> {d.destination}
+                                                        {d.origin}{" "}
+                                                        <span className="text-white/50">→</span>{" "}
+                                                        {d.destination}
                                                     </span>
                                                 </div>
                                             </td>
 
-                                            <td className="px-4 py-4 text-white/70">{fmtDates(d)}</td>
+                                            <td className="px-4 py-4 text-white/70">
+                                                {fmtDates(d)}
+                                            </td>
 
                                             <td className="px-4 py-4 text-right font-bold text-white">
                                                 £{d.priceGBP.toFixed(0)}
@@ -233,6 +261,16 @@ export default function DealsTable({ deals }: Props) {
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            {/* Footer stats */}
+            <div className="flex flex-wrap items-center justify-start gap-2 md:justify-end m-5">
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-white/70">
+                    Showing <b className="text-white">{sorted.length}</b>
+                </span>
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-white/70">
+                    Max <b className="text-white">£{maxPrice}</b>
+                </span>
             </div>
         </div>
     );

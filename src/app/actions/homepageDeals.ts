@@ -10,14 +10,15 @@ export async function getHomepageDeals(args?: { take?: number }): Promise<Deal[]
         take,
     });
 
-    // Show “actionable-ish” stuff on the homepage by default
-    const filtered = rows.filter(r => r.lastPrice <= alertMax);
+    const filtered = rows.filter((r) => r.lastPrice <= alertMax);
 
     return filtered.map((r) => ({
+        context: r.context,
         origin: r.origin,
         destination: r.destination,
         departDate: r.departDate,
         returnDate: r.returnDate ?? null,
+        returnDateKey: r.returnDateKey ?? "",
         priceGBP: r.lastPrice,
         currency: "GBP",
     }));
