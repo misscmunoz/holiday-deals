@@ -1,9 +1,9 @@
 import { Deal } from "@/lib/types/deals";
 import { amadeusGet } from "@/lib/amadeus";
-import { dedupeDeals } from "@/lib/dedupe";
+import { dedupeDeals } from "@/lib/helpers/dedupe";
 import { toISODate, nextFridays } from "@/lib/dates";
 import type { InspirationResponse } from "@/lib/types/api";
-import { makeDealKey } from "./makeDealKey";
+import { makeDealKey } from "./helpers/makeDealKey";
 
 const SEARCH_DAYS_AHEAD = 30;
 const SEARCH_WEEKS_AHEAD = 5;

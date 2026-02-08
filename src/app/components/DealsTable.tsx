@@ -4,7 +4,7 @@ import React from "react";
 import type { Deal } from "@/lib/types";
 
 import { deleteDealsByKeys } from "@/app/actions/deleteDeals";
-import { makeDealKey } from "@/lib/makeDealKey";
+import { makeDealKey } from "@/lib/helpers/makeDealKey";
 import { Flag } from "./Flag";
 import { formatDealDates } from "@/lib/dates";
 import { usePersistedCheckboxMap } from "@/hooks/usePersistedCheckboxMap";
