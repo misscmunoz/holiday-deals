@@ -52,6 +52,43 @@ export default function DealsTable({ deals }: Props) {
         });
     }, [deals, q, maxPrice]);
 
+    const STORAGE_KEY = "selectedDeals";
+    const [selectedKeys, setSelectedKeys] = React.useState<Record<string, boolean>>(() => {
+        if (typeof window === "undefined") return {};
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? JSON.parse(saved) : {};
+    });
+
+    React.useEffect(() => {
+        if (typeof window !== "undefined") {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(selectedKeys));
+        }
+    }, [selectedKeys]);
+
+    const allVisibleKeys = sorted.map(
+        (d) => `${d.origin}-${d.destination}-${d.departDate}-${d.returnDate ?? ""}`
+    );
+
+    const areAllSelected = allVisibleKeys.every((k) => selectedKeys[k]);
+    const isIndeterminate = allVisibleKeys.some((k) => selectedKeys[k]) && !areAllSelected;
+
+    const toggleSelectAll = () => {
+        setSelectedKeys((prev) => {
+            const next = { ...prev };
+            const shouldSelectAll = !areAllSelected;
+
+            for (const key of allVisibleKeys) {
+                if (shouldSelectAll) {
+                    next[key] = true;
+                } else {
+                    delete next[key];
+                }
+            }
+
+            return next;
+        });
+    };
+
     return (
         <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
             <div className="p-5">
@@ -90,6 +127,31 @@ export default function DealsTable({ deals }: Props) {
                             Max <b className="text-white">£{maxPrice}</b>
                         </span>
                     </div>
+
+                    {Object.keys(selectedKeys).length > 0 && (
+                        <div className="col-span-full mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">
+                            <span>
+                                {Object.keys(selectedKeys).length} deal{Object.keys(selectedKeys).length > 1 && "s"} selected
+                            </span>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => {
+                                        const selected = Object.keys(selectedKeys);
+                                        alert(`You selected:\n${selected.join("\n")}`);
+                                    }}
+                                    className="rounded-lg bg-white/10 px-4 py-1.5 text-white hover:bg-white/20 transition"
+                                >
+                                    Do Something
+                                </button>
+                                <button
+                                    onClick={() => setSelectedKeys({})}
+                                    className="rounded-lg bg-red-500/20 px-4 py-1.5 text-red-300 hover:bg-red-500/30 transition"
+                                >
+                                    Clear Selection
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Table */}
@@ -97,6 +159,17 @@ export default function DealsTable({ deals }: Props) {
                     <table className="w-full table-auto">
                         <thead className="bg-white/[0.04]">
                             <tr className="[&>th]:px-4 [&>th]:py-3">
+                                <th className="w-10 px-4">
+                                    <input
+                                        type="checkbox"
+                                        checked={areAllSelected}
+                                        ref={(input) => {
+                                            if (input) input.indeterminate = isIndeterminate;
+                                        }}
+                                        onChange={toggleSelectAll}
+                                        className="accent-white/70"
+                                    />
+                                </th>
                                 <th className="text-left text-xs font-semibold tracking-[0.18em] text-white/55">
                                     Route
                                 </th>
@@ -112,7 +185,7 @@ export default function DealsTable({ deals }: Props) {
                         <tbody className="divide-y divide-white/10">
                             {sorted.length === 0 ? (
                                 <tr>
-                                    <td colSpan={3} className="px-4 py-10 text-center text-white/60">
+                                    <td colSpan={4} className="px-4 py-10 text-center text-white/60">
                                         No deals match your filters (airlines are ghosting again).
                                     </td>
                                 </tr>
@@ -125,6 +198,20 @@ export default function DealsTable({ deals }: Props) {
                                             key={key}
                                             className="bg-transparent hover:bg-white/[0.035] transition-colors"
                                         >
+                                            <td className="px-4 py-4">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={!!selectedKeys[key]}
+                                                    onChange={() =>
+                                                        setSelectedKeys((prev) => ({
+                                                            ...prev,
+                                                            [key]: !prev[key],
+                                                        }))
+                                                    }
+                                                    className="accent-white/70"
+                                                />
+                                            </td>
+
                                             <td className="px-4 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <Flag iata={d.destination} />
