@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { buildDealsForTrip } from "@/lib/dealBuilder";
 import { weekendTrips } from "@/lib/trips";
 import { getBankHolidayWeekends } from "@/lib/bankHolidays";
-import { upsertAndDetectAlert, type AlertItem } from "@/lib/alerts";
-import type { DealCategory, Trip } from "@/lib/types/travel";
+import { upsertAndDetectAlert } from "@/lib/alerts";
+import type { DealCategory, Trip, AlertItem } from "@/lib/types";
 import { asyncPool } from "@/lib/asyncPool";
 import { toDeal } from "@/lib/mappers/toDeal";
 

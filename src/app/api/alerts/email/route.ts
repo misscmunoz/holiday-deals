@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
-import { buildDealsEmailHtml, buildDealsEmailText, type DealLine } from "@/lib/emailTemplate";
+import { buildDealsEmailHtml, buildDealsEmailText } from "@/lib/emailTemplate";
+import { DealLine } from "@/lib/types";
 import type { AlertsRunResponse } from "@/lib/types";
 
 function requireEnv(name: string) {
