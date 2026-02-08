@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "vercel-build": "prisma generate && next build"
+    "vercel-build": "prisma generate && next build",
+    "cron:run": "curl -X POST http://localhost:3000/api/alerts/email -H \"x-cron-secret: some-long-random-string\""
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",

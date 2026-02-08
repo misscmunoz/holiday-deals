@@ -2,7 +2,7 @@ name: Holiday deals email
 
 on:
   schedule:
-    - cron: "15 8 * * *"
+    - cron: "0 7 * * *"   # 7am UTC every day
   workflow_dispatch: {}
 
 jobs:
