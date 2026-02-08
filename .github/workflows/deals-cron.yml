@@ -15,8 +15,12 @@ jobs:
     steps:
       - name: Call email endpoint
         run: |
-          echo "Calling: $APP_BASE_URL/api/alerts/email"
-          curl -sS --fail-with-body -X POST "$APP_BASE_URL/api/alerts/email" \
+          URL="${APP_BASE_URL%/}/api/alerts/email"
+          echo "Calling: $URL"
+
+          curl -sS -L --fail-with-body \
+            -X POST "$URL" \
             -H "x-cron-secret: $CRON_SECRET" \
             -H "content-type: application/json" \
-            -d '{}'
+            -d '{}' \
+            -w "\nHTTP %{http_code}\n"
