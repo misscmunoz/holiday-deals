@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import type { Deal } from "@/lib/deals";
+import type { Deal } from "@/lib/types/deals";
 
 export type AlertReason = "NEW_DEAL" | "PRICE_DROP";
 

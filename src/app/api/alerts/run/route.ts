@@ -3,8 +3,9 @@ import { buildDealsForTrip } from "@/lib/dealBuilder";
 import { weekendTrips } from "@/lib/trips";
 import { getBankHolidayWeekends } from "@/lib/bankHolidays";
 import { upsertAndDetectAlert, type AlertItem } from "@/lib/alerts";
-import type { DealCategory, Trip } from "@/lib/providers/types";
+import type { DealCategory, Trip } from "@/lib/types/travel";
 import { asyncPool } from "@/lib/asyncPool";
+import { toDeal } from "@/lib/mappers/toDeal";
 
 const PRICE_DROP_THRESHOLD_GBP = 15;
 
@@ -18,40 +19,17 @@ const ALERT_MAX_PRICE_GBP = Number(process.env.ALERT_MAX_PRICE_GBP ?? "150");
 
 const ORIGINS = (process.env.ORIGINS ?? "MAN,LPL")
   .split(",")
-  .map(s => s.trim())
+  .map((s) => s.trim())
   .filter(Boolean);
 
 // Use SAMPLE_DESTINATIONS for dev; swap to DESTINATIONS for prod whenever you want
 const DESTINATIONS = (process.env.SAMPLE_DESTINATIONS ?? "")
   .split(",")
-  .map(s => s.trim())
+  .map((s) => s.trim())
   .filter(Boolean);
 
 const CATEGORIES: DealCategory[] = ["FLIGHT_ONLY", "FLIGHT_PLUS_STAY"];
 const WEEKS_AHEAD = 4;
-
-type DealLike = {
-  origin: string;
-  destination: string;
-  departDate: string;
-  returnDate: string | null;
-  priceGBP: number;
-  currency: string;
-};
-
-function toDealLike(deal: {
-  trip: Trip;
-  total: { amount: number; currency: "GBP" };
-}): DealLike {
-  return {
-    origin: deal.trip.origin,
-    destination: deal.trip.destination,
-    departDate: deal.trip.departDate,
-    returnDate: deal.trip.returnDate ?? null,
-    priceGBP: deal.total.amount,
-    currency: deal.total.currency,
-  };
-}
 
 export async function GET() {
   try {
@@ -71,10 +49,8 @@ export async function GET() {
 
     const cappedWeekendTrips = trips.slice(0, WEEKEND_TRIP_CAP);
 
-    const weekendDealBatches = await asyncPool(
-      CONCURRENCY,
-      cappedWeekendTrips,
-      async (trip) => buildDealsForTrip(trip, CATEGORIES, { maxTotalGBP: STORE_MAX_PRICE_GBP })
+    const weekendDealBatches = await asyncPool(CONCURRENCY, cappedWeekendTrips, async (trip) =>
+      buildDealsForTrip(trip, CATEGORIES, { maxTotalGBP: STORE_MAX_PRICE_GBP })
     );
 
     const weekendDeals = weekendDealBatches.flat();
@@ -84,12 +60,12 @@ export async function GET() {
       return acc;
     }, {});
 
-    for (const deal of weekendDeals) {
-      const context = `regular:${deal.category}`;
-      const dealLike = toDealLike(deal);
+    for (const d of weekendDeals) {
+      const context = `regular:${d.category}`;
+      const deal = toDeal(d);
 
       const alert = await upsertAndDetectAlert({
-        deal: dealLike,
+        deal,
         context,
         priceDropThresholdGBP: PRICE_DROP_THRESHOLD_GBP,
       });
@@ -97,25 +73,22 @@ export async function GET() {
       if (alert) {
         allAlerts.push(alert);
 
-        if (dealLike.priceGBP <= ALERT_MAX_PRICE_GBP) {
-          actionableAlerts.push(alert);
-        } else {
-          suppressedByBudget += 1;
-        }
+        if (deal.priceGBP <= ALERT_MAX_PRICE_GBP) actionableAlerts.push(alert);
+        else suppressedByBudget += 1;
       }
     }
 
     /**
-     * 2) BANK HOLIDAY WINDOWS (dedupe by start/end)
+     * 2) BANK HOLIDAY WINDOWS
      */
     const bhWeekends = await getBankHolidayWeekends({
       region: "england-and-wales",
       daysAhead: 180,
     });
 
-    const bhTripItems: Array<{ trip: Trip; contextPrefix: string }> = [];
     const bhWindows = bhWeekends.slice(0, 3);
-    
+
+    const bhTripItems: Array<{ trip: Trip; contextPrefix: string }> = [];
     for (const bh of bhWindows) {
       for (const origin of ORIGINS) {
         for (const destination of DESTINATIONS) {
@@ -137,28 +110,24 @@ export async function GET() {
 
     const cappedBhTripItems = bhTripItems.slice(0, BH_TRIP_CAP);
 
-    const bhDealBatches = await asyncPool(
-      CONCURRENCY,
-      cappedBhTripItems,
-      async (item) => {
-        const deals = await buildDealsForTrip(item.trip, CATEGORIES, { maxTotalGBP: STORE_MAX_PRICE_GBP });
-        return deals.map(d => ({ deal: d, contextPrefix: item.contextPrefix }));
-      }
-    );
+    const bhDealBatches = await asyncPool(CONCURRENCY, cappedBhTripItems, async (item) => {
+      const deals = await buildDealsForTrip(item.trip, CATEGORIES, { maxTotalGBP: STORE_MAX_PRICE_GBP });
+      return deals.map((d) => ({ built: d, contextPrefix: item.contextPrefix }));
+    });
 
     const bhDeals = bhDealBatches.flat().flat();
 
     const bankHolidayByCategory = bhDeals.reduce<Record<string, number>>((acc, x) => {
-      acc[x.deal.category] = (acc[x.deal.category] ?? 0) + 1;
+      acc[x.built.category] = (acc[x.built.category] ?? 0) + 1;
       return acc;
     }, {});
 
-    for (const item of bhDeals) {
-      const context = `${item.contextPrefix}:${item.deal.category}`;
-      const dealLike = toDealLike(item.deal);
+    for (const x of bhDeals) {
+      const context = `${x.contextPrefix}:${x.built.category}`;
+      const deal = toDeal(x.built);
 
       const alert = await upsertAndDetectAlert({
-        deal: dealLike,
+        deal,
         context,
         priceDropThresholdGBP: PRICE_DROP_THRESHOLD_GBP,
       });
@@ -166,11 +135,8 @@ export async function GET() {
       if (alert) {
         allAlerts.push(alert);
 
-        if (dealLike.priceGBP <= ALERT_MAX_PRICE_GBP) {
-          actionableAlerts.push(alert);
-        } else {
-          suppressedByBudget += 1;
-        }
+        if (deal.priceGBP <= ALERT_MAX_PRICE_GBP) actionableAlerts.push(alert);
+        else suppressedByBudget += 1;
       }
     }
 

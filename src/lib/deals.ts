@@ -1,17 +1,11 @@
+import { DealLike } from "./types/deals";
 import { amadeusGet } from "@/lib/amadeus";
+import { dedupeDeals } from "@/lib/dedupe";
 import { toISODate, nextFridays } from "@/lib/dates";
+
 
 const SEARCH_DAYS_AHEAD = 30;
 const SEARCH_WEEKS_AHEAD = 5;
-
-export type Deal = {
-  origin: string;
-  destination: string;
-  departDate: string;
-  returnDate?: string | null;
-  priceGBP: number;
-  currency: string;
-};
 
 const MAX_PRICE = Number(process.env.MAX_PRICE_GBP ?? "150");
 const ORIGINS = (process.env.ORIGINS ?? "LPL,MAN")
@@ -40,7 +34,7 @@ export async function fetchWeekendDeals() {
   const dateTo = toISODate(end);
 
   const fridays = new Set(nextFridays(SEARCH_WEEKS_AHEAD));
-  const deals: Deal[] = [];
+  const deals: DealLike[] = [];
 
   for (const origin of ORIGINS) {
     try {
@@ -86,14 +80,7 @@ export async function fetchWeekendDeals() {
   }
 
   // --- DEDUPE DEALS ---
-  const seen = new Set<string>();
-  const uniqueDeals = deals.filter(d => {
-    const key = `${d.origin}|${d.destination}|${d.departDate}|${d.returnDate ?? ""}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-
+  const uniqueDeals = dedupeDeals(deals);
   // cheapest first
   uniqueDeals.sort((a, b) => a.priceGBP - b.priceGBP);
   return uniqueDeals;
@@ -111,7 +98,7 @@ export async function fetchDealsForDateRange(args: {
   const MAX_PRICE = Number(process.env.MAX_PRICE_GBP ?? "150");
   const ORIGINS = (process.env.ORIGINS ?? "LPL,MAN").split(",").map(s => s.trim());
 
-  const deals: Deal[] = [];
+  const deals: DealLike[] = [];
 
   for (const origin of ORIGINS) {
     try {
@@ -192,7 +179,7 @@ export async function fetchWeekendDealsViaOffers(args: {
   departDate: string;  // YYYY-MM-DD
   returnDate: string;  // YYYY-MM-DD
 }) {
-  const deals: Deal[] = [];
+  const deals: DealLike[] = [];
 
   for (const destination of DESTINATIONS) {
     try {
@@ -244,15 +231,8 @@ export async function fetchWeekendDealsViaOffers(args: {
     }
   }
 
-  // dedupe + sort
-  const seen = new Set<string>();
-  const uniqueDeals = deals.filter(d => {
-    const key = `${d.origin}|${d.destination}|${d.departDate}|${d.returnDate ?? ""}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-
+  // --- DEDUPE DEALS ---
+  const uniqueDeals = dedupeDeals(deals);
   uniqueDeals.sort((a, b) => a.priceGBP - b.priceGBP);
   return uniqueDeals;
 }

@@ -12,7 +12,16 @@
     "cron:run": "curl -sS --fail-with-body -X POST \"http://localhost:3000/api/alerts/email\" -H \"x-cron-secret: some-long-random-string\" -H \"content-type: application/json\" -d '{}'"
   },
   "dependencies": {
+    "@heroui/input": "^2.4.31",
+    "@heroui/react": "^3.0.0-beta.2",
+    "@heroui/select": "^2.4.31",
+    "@heroui/styles": "^3.0.0-beta.2",
+    "@heroui/system": "^2.4.26",
+    "@heroui/table": "^2.2.30",
+    "@heroui/theme": "^2.4.26",
     "@prisma/client": "^6.19.2",
+    "country-flag-icons": "^1.6.12",
+    "framer-motion": "^12.33.0",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",

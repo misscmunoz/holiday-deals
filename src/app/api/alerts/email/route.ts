@@ -1,17 +1,7 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { buildDealsEmailHtml, buildDealsEmailText, type DealLine } from "@/lib/emailTemplate";
-
-type AlertsRunResponse = {
-    origins: string[];
-    thresholds: { alertMaxGBP: number };
-    alerts: { actionable: number; totalDetected: number; suppressedByBudget: number };
-    alertsSample: Array<{
-        deal: { origin: string; destination: string; departDate: string; returnDate: string | null; priceGBP: number; currency: string };
-        context: string;
-        reason: string;
-    }>;
-};
+import type { AlertsRunResponse } from "@/lib/types";
 
 function requireEnv(name: string) {
     const v = process.env[name];
@@ -38,6 +28,7 @@ export async function POST(req: Request) {
 
         const runRes = await fetch(`${baseUrl}/api/alerts/run`, { cache: "no-store" });
         if (!runRes.ok) throw new Error(`Run endpoint failed: ${runRes.status} ${await runRes.text()}`);
+
         const json = (await runRes.json()) as AlertsRunResponse;
 
         if (!json.alerts?.actionable || json.alerts.actionable <= 0) {
@@ -50,13 +41,15 @@ export async function POST(req: Request) {
 
         const subject = `✈️ ${json.alerts.actionable} deals under £${json.thresholds.alertMaxGBP} (${json.origins.join(", ")})`;
 
-        const deals: DealLine[] = json.alertsSample.map((a) => ({
+        const deals: DealLine[] = (json.alertsSample ?? []).map((a) => ({
             ...a.deal,
             reason: a.reason,
         }));
 
+        const heading = `${json.alerts.actionable} deals found`;
+
         const text = buildDealsEmailText({
-            heading: `${json.alerts.actionable} deals found`,
+            heading,
             maxPrice: json.thresholds.alertMaxGBP,
             origins: json.origins,
             deals,
@@ -64,7 +57,7 @@ export async function POST(req: Request) {
         });
 
         const html = buildDealsEmailHtml({
-            heading: `${json.alerts.actionable} deals found`,
+            heading,
             maxPrice: json.thresholds.alertMaxGBP,
             origins: json.origins,
             deals,
