@@ -1,4 +1,4 @@
-import type { DealCategory, TravelDeal, Trip } from "@/lib/providers/types";
+import type { DealCategory, TravelDeal, Trip } from "@/lib/types";
 import { getCheapestFlightAmadeus } from "@/lib/providers/amadeusFlights";
 import { getCheapestFlightDuffel } from "@/lib/providers/duffelFlights";
 import { getCheapestStayHostelFirst } from "@/lib/providers/stays";
