@@ -17,10 +17,12 @@ export function toDeal(input: TravelDeal | HasTripAndTotal): Deal {
     const total = input.total;
 
     return {
+        context: trip.context,
         origin: trip.origin,
         destination: trip.destination,
         departDate: trip.departDate,
         returnDate: trip.returnDate ?? null,
+        returnDateKey: trip.returnDateKey,
         priceGBP: total.amount,
         currency: total.currency,
     };

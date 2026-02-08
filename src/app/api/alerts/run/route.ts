@@ -94,15 +94,19 @@ export async function GET() {
         for (const destination of DESTINATIONS) {
           if (origin === destination) continue;
 
+          const context = `bh:${bh.holidayDate}`;
+
           bhTripItems.push({
             trip: {
+              context,
               origin,
               destination,
               departDate: bh.startDate,
               returnDate: bh.endDate,
+              returnDateKey: bh.endDate,
               adults: 1,
             },
-            contextPrefix: `bh:${bh.holidayDate}`,
+            contextPrefix: context,
           });
         }
       }
