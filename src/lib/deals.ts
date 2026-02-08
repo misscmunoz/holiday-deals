@@ -2,7 +2,7 @@ import { Deal } from "@/lib/types/deals";
 import { amadeusGet } from "@/lib/amadeus";
 import { dedupeDeals } from "@/lib/dedupe";
 import { toISODate, nextFridays } from "@/lib/dates";
-
+import type { InspirationResponse } from "@/lib/types/api";
 
 const SEARCH_DAYS_AHEAD = 30;
 const SEARCH_WEEKS_AHEAD = 5;
@@ -12,19 +12,7 @@ const ORIGINS = (process.env.ORIGINS ?? "LPL,MAN")
   .split(",")
   .map(s => s.trim());
 
-type InspirationResponse = {
-  data?: Array<{
-    origin: string;
-    destination: string;
-    departureDate: string;
-    returnDate?: string | null;
-    price?: { total?: string; currency?: string };
-  }>;
-};
 
-/**
- * Fetches Weekend Deals
- */
 export async function fetchWeekendDeals() {
   const start = new Date();
   const end = new Date();
@@ -43,61 +31,47 @@ export async function fetchWeekendDeals() {
         {
           origin,
           departureDate: `${dateFrom},${dateTo}`,
-          duration: "2,3", // weekend-ish
+          duration: "2,3",
           currency: "GBP",
           maxPrice: String(MAX_PRICE),
         }
-      )
+      );
 
       const rows = Array.isArray(json.data) ? json.data : [];
 
-
       for (const r of rows) {
         if (!r.departureDate || !fridays.has(r.departureDate)) continue;
-        console.log(
-          `[${origin}] sample departureDates:`,
-          rows.slice(0, 5).map(r => r.departureDate)
-        );
 
         const price = Number(r.price?.total);
         if (!Number.isFinite(price) || price > MAX_PRICE) continue;
 
         deals.push({
+          context: "weekend",
           origin: r.origin,
           destination: r.destination,
           departDate: r.departureDate,
           returnDate: r.returnDate ?? null,
+          returnDateKey: r.returnDate ?? "",
           priceGBP: price,
           currency: r.price?.currency ?? "GBP",
         });
       }
     } catch (e) {
       console.error(`[Amadeus] inspiration failed for origin=${origin}`, e);
-      // skip this origin
       continue;
-
     }
   }
 
-  // --- DEDUPE DEALS ---
   const uniqueDeals = dedupeDeals(deals);
-  // cheapest first
   uniqueDeals.sort((a, b) => a.priceGBP - b.priceGBP);
   return uniqueDeals;
 }
 
-/**
- * Fetches Specific Date Deals
- * (used in bank holiday)
- */
 export async function fetchDealsForDateRange(args: {
-  startDate: string; // YYYY-MM-DD
-  endDate: string;   // YYYY-MM-DD
-  durationDays: string; // e.g. "3,4"
+  startDate: string;
+  endDate: string;
+  durationDays: string;
 }) {
-  const MAX_PRICE = Number(process.env.MAX_PRICE_GBP ?? "150");
-  const ORIGINS = (process.env.ORIGINS ?? "LPL,MAN").split(",").map(s => s.trim());
-
   const deals: Deal[] = [];
 
   for (const origin of ORIGINS) {
@@ -119,10 +93,12 @@ export async function fetchDealsForDateRange(args: {
         if (!Number.isFinite(price) || price > MAX_PRICE) continue;
 
         deals.push({
+          context: "date-range",
           origin: r.origin,
           destination: r.destination,
           departDate: r.departureDate,
           returnDate: r.returnDate ?? null,
+          returnDateKey: r.returnDate ?? "",
           priceGBP: price,
           currency: r.price?.currency ?? "GBP",
         });
@@ -136,19 +112,16 @@ export async function fetchDealsForDateRange(args: {
     }
   }
 
-  // --- DEDUPE DEALS ---
   const seen = new Set<string>();
   const uniqueDeals = deals.filter(d => {
-    const key = `${d.origin}|${d.destination}|${d.departDate}|${d.returnDate ?? ""}`;
+    const key = `${d.context}|${d.origin}|${d.destination}|${d.departDate}|${d.returnDateKey}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
 
-  // cheapest first
   uniqueDeals.sort((a, b) => a.priceGBP - b.priceGBP);
   return uniqueDeals;
-
 }
 
 type FlightOffersResponse = {
@@ -175,9 +148,10 @@ const DESTINATIONS = uniq(
 );
 
 export async function fetchWeekendDealsViaOffers(args: {
+  context: string;
   origin: string;
-  departDate: string;  // YYYY-MM-DD
-  returnDate: string;  // YYYY-MM-DD
+  departDate: string;
+  returnDate: string;
 }) {
   const deals: Deal[] = [];
 
@@ -200,7 +174,6 @@ export async function fetchWeekendDealsViaOffers(args: {
       const offers = Array.isArray(json.data) ? json.data : [];
       if (offers.length === 0) continue;
 
-      // cheapest offer for that destination
       let best = offers[0];
       let bestPrice = Number(best.price?.total);
 
@@ -215,10 +188,12 @@ export async function fetchWeekendDealsViaOffers(args: {
       if (!Number.isFinite(bestPrice) || bestPrice > MAX_PRICE) continue;
 
       deals.push({
+        context: args.context,
         origin: args.origin,
         destination,
         departDate: args.departDate,
         returnDate: args.returnDate,
+        returnDateKey: args.returnDate,
         priceGBP: bestPrice,
         currency: best.price?.currency ?? "GBP",
       });
@@ -231,7 +206,6 @@ export async function fetchWeekendDealsViaOffers(args: {
     }
   }
 
-  // --- DEDUPE DEALS ---
   const uniqueDeals = dedupeDeals(deals);
   uniqueDeals.sort((a, b) => a.priceGBP - b.priceGBP);
   return uniqueDeals;

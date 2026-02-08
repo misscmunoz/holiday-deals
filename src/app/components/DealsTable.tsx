@@ -1,45 +1,15 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
 import type { Deal } from "@/lib/types";
-import { AIRPORT_TO_COUNTRY } from "@/lib/airportCountries";
+
 import { deleteDealsByKeys } from "@/app/actions/deleteDeals";
+import { makeDealKey } from "@/lib/makeDealKey";
+import { Flag } from "./Flag";
+import { formatDealDates } from "@/lib/dates";
+import { usePersistedCheckboxMap } from "@/hooks/usePersistedCheckboxMap";
 
 type Props = { deals: Deal[] };
-
-function fmtDates(d: Deal) {
-    return d.returnDate ? `${d.departDate} → ${d.returnDate}` : d.departDate;
-}
-
-function Flag({ iata }: { iata: string }) {
-    const country = AIRPORT_TO_COUNTRY[iata];
-    if (!country) return null;
-
-    return (
-        <Image
-            src={`https://flagcdn.com/w20/${country.toLowerCase()}.png`}
-            width={20}
-            height={14}
-            alt={country}
-            className="rounded-[4px] ring-1 ring-white/10"
-        />
-    );
-}
-
-/**
- * This MUST match your Prisma unique key:
- * @@unique([context, origin, destination, departDate, returnDateKey])
- */
-function makeKey(d: Deal) {
-    return [
-        d.context,
-        d.origin,
-        d.destination,
-        d.departDate,
-        d.returnDate ?? "" // maps to returnDateKey
-    ].join("::");
-}
 
 export default function DealsTable({ deals }: Props) {
     const [q, setQ] = React.useState("");
@@ -69,12 +39,7 @@ export default function DealsTable({ deals }: Props) {
 
     const STORAGE_KEY = "selectedDeals";
 
-    const [selectedKeys, setSelectedKeys] = React.useState<Record<string, boolean>>(() => {
-        if (typeof window === "undefined") return {};
-        const saved = localStorage.getItem(STORAGE_KEY);
-        return saved ? JSON.parse(saved) : {};
-    });
-
+    const [selectedKeys, setSelectedKeys] = usePersistedCheckboxMap(STORAGE_KEY);
     React.useEffect(() => {
         if (typeof window !== "undefined") {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(selectedKeys));
@@ -82,7 +47,7 @@ export default function DealsTable({ deals }: Props) {
     }, [selectedKeys]);
 
     // ✅ Use the SAME key format everywhere
-    const allVisibleKeys = sorted.map(makeKey);
+    const allVisibleKeys = sorted.map(makeDealKey);
 
     const areAllSelected = allVisibleKeys.every((k) => selectedKeys[k]);
     const isIndeterminate =
@@ -215,7 +180,7 @@ export default function DealsTable({ deals }: Props) {
                                 </tr>
                             ) : (
                                 sorted.map((d) => {
-                                    const key = makeKey(d);
+                                    const key = makeDealKey(d);
 
                                     return (
                                         <tr
@@ -238,17 +203,18 @@ export default function DealsTable({ deals }: Props) {
 
                                             <td className="px-4 py-4">
                                                 <div className="flex items-center gap-3">
-                                                    <Flag iata={d.destination} />
+                                                    <Flag iata={d.origin} />
                                                     <span className="font-semibold text-white">
                                                         {d.origin}{" "}
                                                         <span className="text-white/50">→</span>{" "}
                                                         {d.destination}
                                                     </span>
+                                                    <Flag iata={d.destination} />
                                                 </div>
                                             </td>
 
                                             <td className="px-4 py-4 text-white/70">
-                                                {fmtDates(d)}
+                                                {formatDealDates(d)}
                                             </td>
 
                                             <td className="px-4 py-4 text-right font-bold text-white">

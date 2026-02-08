@@ -1,3 +1,12 @@
+import type { Deal } from "@/lib/types";
+
+/**
+ * Format deal dates for display
+ */
+export function formatDealDates(d: Deal) {
+  return d.returnDate ? `${d.departDate} → ${d.returnDate}` : d.departDate;
+}
+
 export function toISODate(d: Date) {
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");

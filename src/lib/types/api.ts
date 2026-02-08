@@ -18,3 +18,16 @@ export type AlertsRunResponse = {
     alertsSample: AlertItem[];
     note?: string;
 };
+
+export type InspirationResponse = {
+    data?: Array<{
+        origin: string;
+        destination: string;
+        departureDate: string;
+        returnDate?: string | null;
+        price?: {
+            total?: string;
+            currency?: string;
+        };
+    }>;
+};
