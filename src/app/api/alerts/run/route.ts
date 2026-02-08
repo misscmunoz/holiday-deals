@@ -7,6 +7,7 @@ import type { DealCategory, Trip, AlertItem } from "@/lib/types";
 import { asyncPool } from "@/lib/asyncPool";
 import { toDeal } from "@/lib/mappers/toDeal";
 
+
 const PRICE_DROP_THRESHOLD_GBP = 15;
 
 // Tune these for speed/cost
@@ -98,12 +99,10 @@ export async function GET() {
 
           bhTripItems.push({
             trip: {
-              context,
               origin,
               destination,
               departDate: bh.startDate,
               returnDate: bh.endDate,
-              returnDateKey: bh.endDate,
               adults: 1,
             },
             contextPrefix: context,

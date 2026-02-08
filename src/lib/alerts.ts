@@ -1,12 +1,12 @@
 import { prisma } from "@/lib/db";
 import type { Deal } from "@/lib/types/deals";
-import { AlertItem } from "./types";
+import type { AlertItem } from "@/lib/types/alerts";
+
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function toReturnDateKey(returnDate: string | null | undefined) {
-  // Must be non-nullable for Prisma compound unique input
-  return returnDate ?? "";
+  return returnDate ?? ""; // non-nullable for compound unique key
 }
 
 export async function upsertAndDetectAlert(args: {
@@ -18,28 +18,29 @@ export async function upsertAndDetectAlert(args: {
   const { deal, context, priceDropThresholdGBP } = args;
   const cooldownMs = args.cooldownMs ?? DAY_MS;
 
+  const now = new Date();
   const returnDateKey = toReturnDateKey(deal.returnDate);
 
   const whereKey = {
-    context,
+    context: context,
     origin: deal.origin,
     destination: deal.destination,
     departDate: deal.departDate,
     returnDateKey,
   };
 
-  const now = new Date();
 
+  // First, fetch existing so we can decide what alert to emit
   const existing = await prisma.dealSeen.findUnique({
-    where: {
-      deal_seen_key: whereKey,
-    },
+    where: { deal_seen_key: whereKey },
   });
 
+  // If it's brand new, create (via upsert to avoid races) and alert NEW_DEAL
   if (!existing) {
-    await prisma.dealSeen.create({
-      data: {
-        context,
+    await prisma.dealSeen.upsert({
+      where: { deal_seen_key: whereKey },
+      create: {
+        context: context,
         origin: deal.origin,
         destination: deal.destination,
         departDate: deal.departDate,
@@ -49,25 +50,28 @@ export async function upsertAndDetectAlert(args: {
         lastSeenAt: now,
         lastAlertedAt: now,
       },
+      update: {
+        // if another runner created it first, just update seen/price
+        lastSeenAt: now,
+        lastPrice: deal.priceGBP,
+      },
     });
 
     return { deal, context, reason: "NEW_DEAL" };
   }
 
-  const drop = existing.lastPrice - deal.priceGBP;
-  const dropPct = existing.lastPrice > 0 ? drop / existing.lastPrice : 0;
+  const dropGBP = existing.lastPrice - deal.priceGBP;
+  const dropPct = existing.lastPrice > 0 ? dropGBP / existing.lastPrice : 0;
 
   const alertedRecently =
     !!existing.lastAlertedAt &&
     now.getTime() - existing.lastAlertedAt.getTime() < cooldownMs;
 
-  const significantDrop = drop >= priceDropThresholdGBP || dropPct >= 0.1;
+  const significantDrop = dropGBP >= priceDropThresholdGBP || dropPct >= 0.1;
 
   if (!alertedRecently && significantDrop) {
     await prisma.dealSeen.update({
-      where: {
-        deal_seen_key: whereKey,
-      },
+      where: { deal_seen_key: whereKey },
       data: {
         lastPrice: deal.priceGBP,
         lastSeenAt: now,
@@ -79,15 +83,14 @@ export async function upsertAndDetectAlert(args: {
       deal,
       context,
       reason: "PRICE_DROP",
-      dropGBP: drop,
+      dropGBP,
       dropPct,
     };
   }
 
+  // always update lastSeen / lastPrice
   await prisma.dealSeen.update({
-    where: {
-      deal_seen_key: whereKey,
-    },
+    where: { deal_seen_key: whereKey },
     data: {
       lastSeenAt: now,
       lastPrice: deal.priceGBP,

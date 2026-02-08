@@ -1,12 +1,10 @@
 export type DealCategory = "FLIGHT_ONLY" | "FLIGHT_PLUS_STAY";
 
 export type Trip = {
-    context: string;
     origin: string;       // MAN
     destination: string;  // AMS
     departDate: string;   // YYYY-MM-DD
     returnDate: string;   // YYYY-MM-DD (Trips are always return in your app)
-    returnDateKey: string;
     adults: number;
 };
 
